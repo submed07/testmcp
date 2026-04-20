@@ -27,6 +27,7 @@ Usage:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -258,7 +259,7 @@ async def ainvoke_agent(query: str, agent=None) -> str:
 # =============================================================================
 
 
-def main() -> None:
+async def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
         format="%(levelname)s  %(name)s: %(message)s",
@@ -266,17 +267,10 @@ def main() -> None:
 
     run_id = os.getenv("ADF_RUN_ID", "")
     if run_id:
-        """query = (
-            f"Analyse ADF pipeline run {run_id}. "
-            "What is the overall status and were there any failures?"
-        )"""
-
         query = (
             f"Analyse ADF pipeline run {run_id}."
             "Show the status, start time, end time, and duration for each pipeline and activity."
-)
-
-        
+        )
     else:
         print(
             "Tip: set ADF_RUN_ID=<pipeline-run-id> in .env to analyse a real run.\n"
@@ -292,11 +286,11 @@ def main() -> None:
     print("─" * 60)
 
     agent = build_adf_agent()
-    answer = invoke_agent(query, agent=agent)
+    answer = await ainvoke_agent(query, agent=agent)
 
     print("Answer:")
     print(answer)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
