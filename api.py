@@ -1,18 +1,17 @@
 """
-FastAPI + MCP Server — wraps the existing LangGraph hello agent.
+FastAPI + MCP Server — exposes the ADF LangGraph agent over REST and MCP.
 
 Layout
 ------
 REST endpoints:
     GET  /            → API info & available endpoints
     GET  /health      → health check
-    POST /invoke      → run LangGraph agent directly over HTTP
 
 MCP endpoint (StreamableHTTP transport):
     POST /mcp         → MCP message handler (bidirectional over a single endpoint)
 
 MCP tools exposed:
-    hello_agent(message: str) → runs the LangGraph graph and returns the result
+    analyse_adf_pipeline(pipeline_run_id, query?) → runs the ADF agent and returns a summary
 
 Run:
     uv run uvicorn api:app --reload --port 8000
@@ -35,15 +34,10 @@ load_dotenv()
 
 import uvicorn
 from fastapi import FastAPI
-from pydantic import BaseModel
 
 from mcp.server.fastmcp import FastMCP
 
-# Import and compile the LangGraph graph once at startup
-from main import build_graph
 from adf_agents import ainvoke_agent
-
-graph = build_graph()
 
 
 # ---------------------------------------------------------------------------
@@ -51,16 +45,6 @@ graph = build_graph()
 # ---------------------------------------------------------------------------
 
 mcp = FastMCP("langgraph-mcp-server")
-
-
-@mcp.tool()
-def hello_agent(message: str) -> str:
-    """
-    Run the LangGraph hello agent.
-    Pass a message and the agent echoes it back.
-    """
-    result = graph.invoke({"message": message})
-    return result["message"]
 
 
 @mcp.tool()
@@ -107,26 +91,17 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(
-    title="LangGraph MCP POC",
-    description="LangGraph hello agent exposed via REST and MCP (StreamableHTTP)",
+    title="ADF LangGraph MCP Server",
+    description="Azure Data Factory LangGraph agent exposed via REST and MCP (StreamableHTTP)",
     version="0.1.0",
     lifespan=lifespan,
 )
 
 # Mount the MCP sub-app at "/" — its internal route is at "/mcp",
 # so the full URL becomes http://host:port/mcp.
-# Starlette checks explicit routes (/, /health, /invoke) before the mount,
+# Starlette checks explicit routes (/, /health) before the mount,
 # so those endpoints are not shadowed.
 app.mount("/", _mcp_asgi_app)
-
-
-# ── REST models ─────────────────────────────────────────────────────────────
-
-class InvokeRequest(BaseModel):
-    message: str
-
-class InvokeResponse(BaseModel):
-    result: str
 
 
 # ── REST endpoints ───────────────────────────────────────────────────────────
@@ -134,11 +109,10 @@ class InvokeResponse(BaseModel):
 @app.get("/")
 def root():
     return {
-        "service": "LangGraph MCP POC",
+        "service": "ADF LangGraph MCP Server",
         "rest": {
             "GET  /":       "this info",
             "GET  /health": "health check",
-            "POST /invoke": "run LangGraph agent (JSON body: {message})",
         },
         "mcp": {
             "POST /mcp": "MCP StreamableHTTP endpoint — connect your MCP client here",
@@ -151,13 +125,6 @@ def health():
     return {"status": "ok"}
 
 
-@app.post("/invoke", response_model=InvokeResponse)
-def invoke(req: InvokeRequest):
-    """Call the LangGraph agent directly over REST."""
-    result = graph.invoke({"message": req.message})
-    return InvokeResponse(result=result["message"])
-
-
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
@@ -165,7 +132,6 @@ def invoke(req: InvokeRequest):
 if __name__ == "__main__":
     port = int(os.getenv("PORT", 8000))
     print(f"Starting server on http://0.0.0.0:{port}")
-    print(f"  REST → http://localhost:{port}/invoke")
     print(f"  MCP  → http://localhost:{port}/mcp")
     print(f"  Docs → http://localhost:{port}/docs")
     uvicorn.run(app, host="0.0.0.0", port=port)

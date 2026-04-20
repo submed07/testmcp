@@ -38,20 +38,7 @@ async def main():
                 print(f"  • {tool.name}: {tool.description}")
             print()
 
-            # ── 3. Call hello_agent ──────────────────────────────────────────
-            test_message = "Hello from MCP client!"
-            print(f"Calling hello_agent with: '{test_message}'")
-
-            result = await session.call_tool(
-                "hello_agent",
-                {"message": test_message},
-            )
-
-            print("Response:")
-            for content in result.content:
-                print(f"  {content.text}")
-
-            # ── 4. Call analyse_adf_pipeline ─────────────────────────────────
+            # ── 3. Call analyse_adf_pipeline ─────────────────────────────────
             run_id = os.getenv("ADF_RUN_ID", "")
             if run_id:
                 print(f"\nCalling analyse_adf_pipeline with run_id: '{run_id}'")
