@@ -12,4 +12,6 @@ wheels/
 ARCHITECTURE.drawio
 ARCHITECTURE.md
 debug_adf.py
+debug_output_*.json
+*.log
 .slingshot
