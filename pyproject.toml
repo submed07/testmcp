@@ -23,3 +23,6 @@ adf = [
 agent = [
     "langchain-openai>=0.3.0",
 ]
+dev = [
+    "langgraph-cli[inmem]>=0.1.55",
+]

@@ -172,7 +172,7 @@ def build_adf_agent(llm=None):
     Graph:
         START → agent → [tools → agent]* → END
     """
-    if llm is None:
+    if not hasattr(llm, "bind_tools"):
         llm = _default_llm()
 
     # Bind the ADF tools so the model knows it can call them

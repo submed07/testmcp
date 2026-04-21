@@ -13,6 +13,7 @@ LG-test/
 ├── adf_tools.py     # Azure Data Factory SDK client + standalone MCP server
 ├── api.py           # FastAPI server exposing MCP endpoint
 ├── mcp_client.py    # MCP test client (connects to api.py over StreamableHTTP)
+├── langgraph.json   # LangGraph CLI config — points at build_adf_agent
 ├── pyproject.toml   # Project dependencies (managed with uv)
 └── .env.example     # Environment variable template — copy to .env and fill in
 ```
@@ -83,11 +84,14 @@ The project uses [uv](https://docs.astral.sh/uv/). If you don't have it:
 pip install uv
 ```
 
-Sync dependencies (including Azure SDK and OpenAI extras):
+Sync dependencies (including Azure SDK, OpenAI, and LangGraph CLI extras):
 
 ```bash
-uv sync --extra adf --extra agent
+uv sync --extra adf --extra agent --extra dev
 ```
+
+> The `dev` extra installs `langgraph-cli[inmem]`, which provides the `langgraph` command
+> used by Option A below. Drop it if you don't need the LangGraph dev server.
 
 > The `.venv` directory is already present if you cloned this repo with its environment.
 
@@ -128,18 +132,35 @@ OPENAI_API_VERSION=2024-08-01-preview
 
 ## How to Run
 
-### Option A — ADF analysis agent (CLI)
+### Option A — LangGraph dev server (recommended)
+
+```bash
+uv run langgraph dev
+```
+
+Reads [langgraph.json](langgraph.json), compiles the `adf_agent` graph via
+`build_adf_agent`, and serves it locally with:
+
+- **LangGraph Studio UI** — interactive graph runner at the URL printed in the console
+- **Hot reload** on code changes
+- **Built-in tracing** (hooks into LangSmith if `LANGCHAIN_TRACING_V2=true`)
+
+This is the fastest inner loop for developing the agent.
+
+---
+
+### Option B — ADF analysis agent (one-shot CLI)
 
 ```bash
 uv run python adf_agents.py
 ```
 
 Requires `ADF_RUN_ID` in `.env` and Azure credentials. Analyses the pipeline run and
-prints a structured diagnosis to the terminal.
+prints a structured diagnosis to the terminal. Useful for smoke tests and scripted runs.
 
 ---
 
-### Option B — Full server + MCP client (main workflow)
+### Option C — Full server + MCP client (MCP deployment)
 
 **Terminal 1 — Authenticate and start the server:**
 
@@ -174,7 +195,7 @@ set) calls `analyse_adf_pipeline` with the configured run ID.
 
 ---
 
-### Option C — Standalone ADF MCP server
+### Option D — Standalone ADF MCP server
 
 If you only need the raw ADF tool without the LLM agent layer:
 

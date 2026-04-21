@@ -1,0 +1,8 @@
+{
+  "dependencies": ["."],
+  "graphs": {
+    "adf_agent": "./adf_agents.py:build_adf_agent"
+  },
+  "env": ".env",
+  "python_version": "3.11"
+}
